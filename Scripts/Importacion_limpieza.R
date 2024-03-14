@@ -47,7 +47,7 @@ saveRDS(train_hogares, paste0(path, "Stores/Procesadas/train_hogares.rds"))
 rm(train_hogares)
 
 #Se importa la información para las personas.
-train_personas = read.csv(paste0(path, "Stores/train_personas.csv")) 
+train_personas = read.csv(paste0(path, "Stores/Pre_procesadas/train_personas.csv")) 
 
 
 
