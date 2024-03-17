@@ -49,8 +49,19 @@ rm(train_hogares)
 #Se importa la información para las personas.
 train_personas = read.csv(paste0(path, "Stores/Pre_procesadas/train_personas.csv")) 
 
+#Se conservan las variables de interés
+train_personas = train_personas %>% 
+  select(id, Orden, Clase, Dominio, Estrato1, P6020, P6040, P6090, P6210, 
+         P6240, P6426, P6430, P6920, Pet, Oc, Des, Ina, Oficio) %>%
+  rename(Sexo = P6020, Edad = P6040, Afiliado_SS = P6090, maxEduc = P6210, 
+         actividad = P6240, antiguedad_puesto = P6426, Posicion_actual = P6430, 
+         Cotiza_pension = P6920) %>% #Primero se recodifican las variables 
+  #dicótomas en 0 y 1.
+  mutate(Afiliado_SS = ifelse(Afiliado_SS==2, 0, Afiliado_SS)) %>%
+  mutate(Cotiza_pension = ifelse(Cotiza_pension==2, 0, Cotiza_pension))
 
 
+train_personas = train_personas 
 
 
 
