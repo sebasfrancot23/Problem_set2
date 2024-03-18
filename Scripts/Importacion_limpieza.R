@@ -72,10 +72,13 @@ train_personas = read.csv(paste0(path, "Stores/Pre_procesadas/train_personas.csv
 #Se conservan las variables de interés
 train_personas = train_personas %>% 
   select(id, Orden, Clase, Dominio, Estrato1, P6020, P6040, P6090, P6210, 
-         P6240, P6426, P6430, P6920, Pet, Oc, Des, Ina, Oficio) %>%
+        P6426, P6430, P6920, P6800, P6870, P7495, P7505,  
+        Pet, Oc, Des, Ina, Oficio) %>%
   rename(Sexo = P6020, Edad = P6040, Afiliado_SS = P6090, maxEduc = P6210, 
-         actividad = P6240, antiguedad_puesto = P6426, Posicion_actual = P6430, 
-         Cotiza_pension = P6920)
+        antiguedad_puesto = P6426, Posicion_actual = P6430, 
+        Cotiza_pension = P6920, Tiempo_trabajo_promedio = P6800, 
+        Numero_trabajadores = P6870, Ingreso_arriendos_pension = P7495,
+        Otros_ingresos = P7505)
 
 #Se limpian los datos
 train_personas = train_personas %>%
@@ -113,12 +116,26 @@ aux_menores = train_personas %>% filter(Edad<18 & is.na(Oc)) %>%
   #18 años y que que no trabajen)
   mutate(menores = n()) %>% select(id, menores) %>% distinct()
 
-#Se crea la variable de la proporción del número de personas ocupadas en el hogar
-#en relación al número de personas en edad de trabajar.
-aux_Pet = train_personas %>% filter(Pet==1) %>% group_by(id) %>%
-  mutate(total_Pet = n()) %>% select(id, total_Pet) %>% distinct() 
+#la variable con el tipo de oficio al que más se dedican en el hogar, y el tipo
+#de posición en el trabajo (ver variable Oficio y p6430).
+aux_Pet = train_personas %>% filter(Pet==1) %>% 
+  #Si Oficio es NA es porque no está ocupado.
+  mutate(Oficio = ifelse(is.na(Oficio), 100, Oficio)) %>%
+  #Si Posicion_actual es NA es porque está desocupado
+  mutate(Posicion_actual = ifelse(is.na(Posicion_actual), 0, 
+                                  Posicion_actual)) %>%
+  group_by(id) %>%
+  #La moda
+  mutate(Oficio_hogar = as.numeric(names(which.max(table(Oficio))))) %>%
+  mutate(Posicion_hogar = as.numeric(names(which.max(table(Posicion_actual))))) %>%
+  #Número de personas en edad de trabajar.
+  mutate(total_Pet = n()) %>% 
+  select(id, total_Pet, Oficio_hogar, Posicion_hogar, Numero_afilidos) %>% 
+  distinct() 
+
 aux_Oc = train_personas %>% filter(Pet==1 & !is.na(Oc)) %>% group_by(id) %>% 
-  mutate(total_Oc = n()) %>% select(id, total_Oc) %>% distinct() 
+  mutate(total_Oc = n()) %>% 
+  select(id, total_Oc) %>% distinct() 
 
 #En una sola base.
 aux_prop = merge(aux_Pet, aux_Oc, by = "id", all = T)
@@ -126,14 +143,18 @@ aux_prop = merge(aux_Pet, aux_Oc, by = "id", all = T)
 #personas en edad de trabajar. Acá se reemplaza el NA por cero.
 aux_prop = aux_prop %>% mutate(total_Oc = ifelse(is.na(total_Oc), 0, total_Oc))
 
-#Se crea la proporción.
+#Se crea la variable de la proporción del número de personas ocupadas en el hogar
+#en relación al número de personas en edad de trabajar.
 aux_prop$Pet_Oc_prop = aux_prop$total_Oc/aux_prop$total_Pet 
   
+#Revísate el word por qué este cambio.
+aux_prop = aux_prop[,-4] #Quite la Posición_actual por hogar.
 
   
+aux = train_personas %>% filter(Pet==1) 
 
-  
-
+%>% group_by(id) %>%
+  summarize(count_x_1 = sum(Afiliado_SS == 1, na.rm = TRUE))
 
 
 
