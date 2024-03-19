@@ -253,10 +253,10 @@ test_personas = readRDS(paste0(path, "Stores/Procesadas/test_personas.rds"))
 #Se juntan.
 test_final = merge(test_hogares, test_personas, by = "id", all = T)
 #La función.
-train_final = factores(train_final)
+test_final = factores(test_final)
 
 #Se exporta.
-saveRDS(train_final, paste0(path, "Stores/train_final.rds"))
+saveRDS(test_final, paste0(path, "Stores/test_final.rds"))
 
 
 
