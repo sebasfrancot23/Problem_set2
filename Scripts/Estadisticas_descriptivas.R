@@ -23,6 +23,9 @@ invisible(sapply(libraries, require, character.only = TRUE,quietly = TRUE))
 #Directorio de trabajo
 path = gsub("(.+)Scripts.+","\\1",rstudioapi::getActiveDocumentContext()$path)
 
+#Se importa la base de datos train.
+train_final = readRDS(paste0(path, "Stores/train_final.rds"))
+test_final = readRDS(paste0(path, "Stores/test_final.rds"))
 #Se juntan las bases en una sola para sacar las estadísticas.
 DB = bind_rows(train_final, test_final)
 
@@ -30,14 +33,24 @@ DB = bind_rows(train_final, test_final)
 # Análisis de missing values. ---------------------------------------------
 #Tabla con total de missings y proporción al total de datos.
 
-Missings = skim(DB[,-(1:3)]) %>% select(skim_variable, n_missing)
-Missings$proporcion = round((Missings$n_missing/dim(DB)[1])*100,2)
+#Se crea una función auxiliar para calcular los missings values.
+Missings_aux = function(x){
+  aux = skim(x[,-(1:3)]) %>% select(skim_variable, n_missing)
+  aux$proporcion = round((aux$n_missing/dim(x)[1])*100,2)
+  return(aux)
+}
+
+Missings_train = Missings_aux(train_final)
+Missings_test = Missings_aux(test_final)
 
 #En Latex.
-stargazer(Missings, type = "latex", title = "Valores faltantes",
+stargazer(Missings_train, type = "latex", title = "Valores faltantes",
+          label = "Tabla_missings", summary = FALSE)
+stargazer(Missings_test, type = "latex", title = "Valores faltantes",
           label = "Tabla_missings", summary = FALSE)
 
-saveRDS(Missings, paste0(path,"Stores/analisis_Missings.rds"))
+saveRDS(Missings_train, paste0(path,"Stores/analisis_Missings_train.rds"))
+saveRDS(Missings_test, paste0(path,"Stores/analisis_Missings_test.rds"))
 
 # Estadísticas vars continuas ---------------------------------------------
 #Las variables continuas son.
@@ -101,7 +114,7 @@ for (i in colnames(DB_discretas)){
       geom_bar(fill = "skyblue", color = "black", alpha = 0.8, 
                width = 0.5) +
       #geom_text(stat = "count", aes(label = after_stat(count)), 
-                hjust = -0.1) +
+                #hjust = -0.1) +
       scale_x_discrete(expand = c(0,800)) +
       labs(title = paste0("Distribución variable ", i), 
            x = "Conteo") +
