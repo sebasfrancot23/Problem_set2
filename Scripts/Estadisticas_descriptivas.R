@@ -2,8 +2,6 @@
 #
 # Programación problem set 2
 # Estadísticas descriptivas.
-# Integrantes:
-# Sebastian Franco Torres
 #
 ###
 # Plan de acción: 
