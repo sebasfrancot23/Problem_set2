@@ -2,8 +2,6 @@
 #
 # Programación problem set 2
 # Importación y limpieza de datos.
-# Integrantes:
-# Sebastian Franco Torres
 #
 #######################
 
