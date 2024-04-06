@@ -100,6 +100,7 @@ rm(Y)
 #Se definen los parámetros para realizar la búsqueda del parámetro óptimo.
 Grilla = expand.grid(alpha = seq(0,1,0.5),
                      lambda = aux_lambda_1$lambda)
+
 #Se definen los parámetros del CV
 fitControl <- trainControl(
   method = "cv", 
@@ -114,14 +115,10 @@ ENet<-train(model,
             tuneGrid = Grilla)
 
 #La relación entre el lambda y el alpha gráficamente:
-png(filename = paste0(path, "Views/Enet.png"),
+png(filename = paste0(path, "Views/Enet_regresion.png"),
     width = 1464, height = 750)
 plot(ENet)
 dev.off()
-
-#El mixing percentage es el valor de alpha, así que por cada combinación de Lasso
-#y Ridge tendremos modelos diferentes para cada lambda (por eso hay distintas curvas,
-#una por cada valor de alpha que estemos probando).
 
 #Los párametros óptimos.
 Parametros = ENet$bestTune #Fíjate que alpha es 0, entonces elastic net escogió 
