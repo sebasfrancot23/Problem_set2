@@ -30,9 +30,9 @@ train_hogares = read.csv(paste0(path, "Stores/Pre_procesadas/train_hogares.csv")
 
 #Variables que nos importan
 train_hogares = train_hogares %>% 
-  select(id, Clase, Dominio, P5000, P5090, P5130, P5140, Nper, Ingtotugarr, 
+  select(id, Clase, Dominio, P5000, P5090, P5130, P5140, Nper, Ingtotug, 
          Lp, Pobre, Depto) %>%
-  rename(numero_cuartos = P5000, tipo_propiedad = P5090, Ingreso_disponible = Ingtotugarr) %>% 
+  rename(numero_cuartos = P5000, tipo_propiedad = P5090, Ingreso_disponible = Ingtotug) %>% 
   mutate(valor_arriendo = ifelse(is.na(P5140), P5130,
                                  P5140)) %>% #Creamos una variable que contenga el valor del 
   #arriendo del hogar.
