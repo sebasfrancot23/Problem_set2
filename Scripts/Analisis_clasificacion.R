@@ -175,8 +175,8 @@ ctrl_multiStats<- trainControl(method = "cv",
                                classProbs = TRUE,
                                verbose=FALSE,
                                savePredictions = T)
-Grilla = expand.grid(alpha = seq(0,1,0.5),
-                     lambda = seq(0,10000,1000))
+Grilla = expand.grid(alpha = seq(0,1,1),
+                     lambda = seq(0,10,10))
 #El train para realizar la búsqueda de los hiperparámetros óptimos.
 logit_tunning_enet = train(model, method = "glmnet", data = train_final,
                       family = "binomial", trControl = ctrl_multiStats,
