@@ -77,8 +77,8 @@ roc_logit = roc(Pred_aux$train_final.Pobre ~ Pred_aux$Pr_logit, plot = T, auc = 
 roc_probit = roc(Pred_aux$train_final.Pobre ~ Pred_aux$Pr_probit, plot = T, auc = F)
 
 #Para gráficar el auc.
-auc_logit <- auc(roc_logit)
-auc_probit <- auc(roc_probit)
+auc_logit = auc(roc_logit)
+auc_probit = auc(roc_probit)
 
 #Una vez especificada la curva ROC, nos quedamos con el treshold óptimo.
 Threshold_logit = coords(roc_logit, "best", ret = "threshold", maximize = "s")
@@ -118,7 +118,7 @@ saveRDS(aux_probit$table, paste0(path,"Stores/Confusion_probit_sintuning.rds"))
 # Calcular el F1 score
 
 
-# Model tunnning ----------------------------------------------------------
+# Model tunning ----------------------------------------------------------
 #Se vuelve a estimar un logit y un probit pero esta vez restringiendo la 
 #estimación a intentar maximizar el F1.
 
@@ -147,6 +147,8 @@ Pred_aux$Pr_logit_tunning = predict(logit_tunning, newdata = train_final,
 #Calculo de la curva roc
 logit_tunning_roc = roc(Pred_aux$train_final.Pobre ~ Pred_aux$Pr_logit_tunning, 
                         plot = T, auc = F)
+auc_logit_tunning = auc(logit_tunning_roc)
+
 #El treshold óptimo.
 Threshold_logit_tunning = coords(logit_tunning_roc, "best", ret = "threshold", 
                                  maximize = "s")
@@ -170,12 +172,13 @@ aux_logit_tunning = confusionMatrix(data = Pred_aux$Pobre_logit_tunning,
 
 #Se definen los parámetros del CV
 ctrl_multiStats<- trainControl(method = "cv",
-                               number = 10,
+                               number = 5,
                                summaryFunction = multiStats,
                                classProbs = TRUE,
                                verbose=FALSE,
                                savePredictions = T)
-Grilla = expand.grid(alpha = seq(0,1,1),
+
+Grilla = expand.grid(alpha = seq(0,1,0.2),
                      lambda = seq(0,10,10))
 #El train para realizar la búsqueda de los hiperparámetros óptimos.
 logit_tunning_enet = train(model, method = "glmnet", data = train_final,
@@ -184,36 +187,62 @@ logit_tunning_enet = train(model, method = "glmnet", data = train_final,
                       tuneGrid = Grilla,
                       metric = "F1")
 
+#Los mejores hiperparámetros son:
+Best_tune = logit_tunning_enet$bestTune
 
+#Nos quedamos con las predicciones en los mejores parámetros
+aux = logit_tunning_enet$pred
+aux = filter(aux, alpha == Best_tune[1,1] & lambda == Best_tune[1,2])
 
+Pred_aux$Pr_logit_enet = aux[["Pobre"]]
+rm(aux)
 
+#Se calcula la curva roc para obtener el mejor punto de corte.
+logit_enet_roc = roc(Pred_aux$train_final.Pobre ~ Pred_aux$Pr_logit_enet, 
+                     plot = T, auc = F)
+auc_logit_enet = auc(logit_enet_roc)
 
+#Threshold óptimo
+Threshold_logit_enet = coords(logit_enet_roc, "best", ret = "threshold", 
+                                 maximize = "s")
+#Las predicciones de pobre.
+Pred_aux = Pred_aux %>% mutate(Pobre_logit_enet = 
+                                 ifelse(Pr_logit_enet>=Threshold_logit_enet[1,1], 
+                                        1, 0)) %>%
+  mutate(Pobre_logit_enet = factor(Pobre_logit_enet, levels = c(0,1), 
+                                      labels = c("No_pobre", "Pobre")))
 
+#La matriz de confusión para obtener el F1 score.
+aux_logit_enet = confusionMatrix(data = Pred_aux$Pobre_logit_enet, 
+                                    reference = Pred_aux$train_final.Pobre,
+                                    positive = "Pobre")
 
 # Curvas ROC. -------------------------------------------------------------
 #Luego de haber estimado distintos modelos Logit Y Probit se gráfican sus curvas
 #roc para entender cuál está siendo el mejor predictor en términos del TPR. 
 
-png(filename = paste0(path, "Views/ROC_sin_tuning.png"),
+png(filename = paste0(path, "Views/Curvas_roc.png"),
     width = 1464, height = 750)
 plot(roc_logit, col = "blue", main = "Curvas ROC de Logit y Probit", print.auc = F)
-plot(roc_probit, col = "red", add = TRUE, lty = 2, print.auc = F) # Agregar curva probit a la misma gráfica
+plot(roc_probit, col = "red", add = TRUE, lty = 2, print.auc = F)
+plot(logit_tunning_roc, col = "green", add = TRUE, lty = 2, print.auc = F)
+plot(logit_enet_roc, col = "orange", add = TRUE, lty = 2, print.auc = F)
 legend("bottomright", legend = c(paste("Logit (AUC =", round(auc_logit, 3), ")"),
-                                 paste("Probit (AUC =", round(auc_probit, 3), ")")),
-       col = c("blue", "red"), lty = 1:2)
+                                 paste("Probit (AUC =", round(auc_probit, 3), ")"),
+                                 paste("Model tunning (AUC =", 
+                                       round(auc_logit_tunning,3), ")"),
+                                 paste("Red Elástica (AUC =", 
+                                       round(auc_logit_enet, 3), ")")),
+       col = c("blue", "red", "green", "orange"), lty = 1:2)
 dev.off
-
-
-
-
-
 
 
 # Métricas modelos --------------------------------------------------------
 #En un solo dataframe se condensan los F1 scores de los modelos.
-F1_DB = data.frame("Modelo" = c("Logit", "Probit"),
+F1_DB = data.frame("Modelo" = c("Logit", "Probit", "Logit_tunning", "Logit_enet"),
                    "F1" = c(aux_logit$byClass["F1"], aux_probit$byClass["F1"],
-                            aux_logit_tunning$byClass["F1"]))
+                            aux_logit_tunning$byClass["F1"], 
+                            aux_logit_enet$byClass["F1"]))
 xtable(F1_DB)
 saveRDS(F1_DB, paste0(path,"Stores/F1_clasificacion.rds"))
 

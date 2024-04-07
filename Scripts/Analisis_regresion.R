@@ -49,7 +49,7 @@ train_final = readRDS(paste0(path, "Stores/train_final.rds"))
 # Modelo de regresión. ---------------------------------------------------
 
 #Por simplicidad se define la ecuación en una variable.
-model = Ingreso_disponible ~ numero_cuartos + tipo_propiedad+Nper+
+model = Ingreso_disponible ~ numero_cuartos + tipo_propiedad+Npersug+
   Depto+valor_arriendo+Edad_promedio+maxEduc_hogar+
   menores+antiguedad_puesto_promedio+Oficio_hogar+
   Tiempo_trabajo_hogar+Tamaño_empresa_hogar+
@@ -77,7 +77,7 @@ lm_normal_RMSE = caret::RMSE(lm_normal_pred, train_final$Ingreso_disponible)
 
 #Primero la grilla para el lambda (peso de la penalidad). Para nos apoyamos en 
 #Se preparan los vectores.
-X = model.matrix(~ numero_cuartos + tipo_propiedad+Nper+
+X = model.matrix(~ numero_cuartos + tipo_propiedad+Npersug+
                    Depto+valor_arriendo+Edad_promedio+maxEduc_hogar+
                    menores+antiguedad_puesto_promedio+Oficio_hogar+
                    Tiempo_trabajo_hogar+Tamaño_empresa_hogar+
@@ -175,19 +175,26 @@ F1_function = function(DB, i, j){
 
 #Primero para el modelo de regresión.
 Pred_aux = data.frame(train_final$Ingreso_disponible, 
-                      train_final$Lp, train_final$Pobre, 
+                      train_final$Lp, train_final$Npersug, 
+                      train_final$Pobre, 
                       "Ingreso_pred_reg" = lm_normal_pred)
 
 #Con base en la predicción y la línea de pobreza se estima si el hogar es pobre
 #o no.
-Pred_aux$Pobre_regresion = ifelse(Pred_aux$train_final.Lp>Pred_aux$Ingreso_pred_reg,
+#No hay que comparar directamente con la línea de pobreza, sino con Lp*Npersug.
+#Es como si la Lp representaa el ingreso mínimo por persona que debe existir 
+#en el hogar. Entonces si Lp por en l número de personas es menor al ingreso
+#de todo el hogar, el hogar es pobre.
+Pred_aux$Pobre_regresion = ifelse(Pred_aux$train_final.Lp*Pred_aux$train_final.Npersug>
+                                    Pred_aux$Ingreso_pred_reg,
                                   1, 0)
 #Se evalúa la función
 F1_regresion = F1_function(Pred_aux, "train_final.Pobre", "Pobre_regresion")  
 
 #Ahora para la red elástica.
 Pred_aux$Ingreso_pred_ENet = predict(ENet, newdata =  train_final) #El ingreso.
-Pred_aux$Pobre_ENet = ifelse(Pred_aux$train_final.Lp>Pred_aux$Ingreso_pred_ENet,
+Pred_aux$Pobre_ENet = ifelse(Pred_aux$train_final.Lp*Pred_aux$train_final.Npersug>
+                               Pred_aux$Ingreso_pred_ENet,
                              1,0)
 #Se calcula el F1 Score
 F1_ENet = F1_function(Pred_aux, "train_final.Pobre", "Pobre_ENet")  

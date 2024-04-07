@@ -30,12 +30,15 @@ train_hogares = read.csv(paste0(path, "Stores/Pre_procesadas/train_hogares.csv")
 
 #Variables que nos importan
 train_hogares = train_hogares %>% 
-  select(id, Clase, Dominio, P5000, P5090, P5130, P5140, Nper, Ingtotug, 
-         Lp, Pobre, Depto) %>%
-  rename(numero_cuartos = P5000, tipo_propiedad = P5090, Ingreso_disponible = Ingtotug) %>% 
+  select(id, Clase, Dominio, P5000, P5090, P5130, P5140, Ingtotugarr, 
+         Lp, Depto, Npersug) %>%
+  rename(numero_cuartos = P5000, tipo_propiedad = P5090, Ingreso_disponible = Ingtotugarr) %>% 
   mutate(valor_arriendo = ifelse(is.na(P5140), P5130,
                                  P5140)) %>% #Creamos una variable que contenga el valor del 
   #arriendo del hogar.
+  #Con base en el comentario de Ignacio, creamos una nueva variable indicadora de 
+  #pobreza.
+  mutate(Pobre = ifelse(Ingreso_disponible<Lp*Npersug, 1, 0)) %>%
   select(-P5130, -P5140)
 
 #Se exporta la base procesada.
