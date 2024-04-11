@@ -176,73 +176,68 @@ aux_logit_tunning = confusionMatrix(data = Pred_aux$Pobre_logit_tunning,
 #Al model tunning se le aplica ahora elastic net y el alternative cut off.
 #La grilla se definió en el código anterior.
 
-
-
-#Se definen los parámetros del CV
-ctrl_multiStats<- trainControl(method = "cv",
-                               number = 5,
-                               summaryFunction = f1,
-                               classProbs = TRUE,
-                               verboseIter = FALSE,
-                               savePredictions = T)
-
-Grilla = expand.grid(alpha = seq(0,1,0.2),
-                     lambda = seq(0,10,10))
-#El train para realizar la búsqueda de los hiperparámetros óptimos.
-logit_tunning_enet = train(model, method = "glmnet", data = train_final,
-                      family = "binomial", trControl = ctrl_multiStats,
-                      preProcess = c("center", "scale"),
-                      tuneGrid = Grilla,
-                      metric = "F1",
-                      maximize = T)
-
-#Los mejores hiperparámetros son:
-Best_tune = logit_tunning_enet$bestTune
-
-#Nos quedamos con las predicciones en los mejores parámetros
-aux = logit_tunning_enet$pred
-aux = filter(aux, alpha == Best_tune[1,1] & lambda == Best_tune[1,2])
-
-Pred_aux$Pr_logit_enet = aux[["Pobre"]]
-rm(aux)
-
-#Se calcula la curva roc para obtener el mejor punto de corte.
-logit_enet_roc = roc(Pred_aux$train_final.Pobre ~ Pred_aux$Pr_logit_enet, 
-                     plot = T, auc = F)
-auc_logit_enet = auc(logit_enet_roc)
-
-#Threshold óptimo
-Threshold_logit_enet = coords(logit_enet_roc, "best", ret = "threshold", 
-                                 maximize = "s")
-#Las predicciones de pobre.
-Pred_aux = Pred_aux %>% mutate(Pobre_logit_enet = 
-                                 ifelse(Pr_logit_enet>=Threshold_logit_enet[1,1], 
-                                        1, 0)) %>%
-  mutate(Pobre_logit_enet = factor(Pobre_logit_enet, levels = c(0,1), 
-                                      labels = c("No_pobre", "Pobre")))
-
-#La matriz de confusión para obtener el F1 score.
-aux_logit_enet = confusionMatrix(data = Pred_aux$Pobre_logit_enet, 
-                                    reference = Pred_aux$train_final.Pobre,
-                                    positive = "Pobre")
-
+# #Se definen los parámetros del CV
+# ctrl_multiStats<- trainControl(method = "cv",
+#                                number = 5,
+#                                summaryFunction = f1,
+#                                classProbs = TRUE,
+#                                verboseIter = FALSE,
+#                                savePredictions = T)
+# 
+# Grilla = expand.grid(alpha = seq(0,1,0.2),
+#                      lambda = seq(0,10,10))
+# #El train para realizar la búsqueda de los hiperparámetros óptimos.
+# logit_tunning_enet = train(model, method = "glmnet", data = train_final,
+#                       family = "binomial", trControl = ctrl_multiStats,
+#                       preProcess = c("center", "scale"),
+#                       tuneGrid = Grilla,
+#                       metric = "F1",
+#                       maximize = T)
+# 
+# #Los mejores hiperparámetros son:
+# Best_tune = logit_tunning_enet$bestTune
+# 
+# #Nos quedamos con las predicciones en los mejores parámetros
+# aux = logit_tunning_enet$pred
+# aux = filter(aux, alpha == Best_tune[1,1] & lambda == Best_tune[1,2])
+# 
+# Pred_aux$Pr_logit_enet = aux[["Pobre"]]
+# rm(aux)
+# 
+# #Se calcula la curva roc para obtener el mejor punto de corte.
+# logit_enet_roc = roc(Pred_aux$train_final.Pobre ~ Pred_aux$Pr_logit_enet, 
+#                      plot = T, auc = F)
+# auc_logit_enet = auc(logit_enet_roc)
+# 
+# #Threshold óptimo
+# Threshold_logit_enet = coords(logit_enet_roc, "best", ret = "threshold", 
+#                                  maximize = "s")
+# #Las predicciones de pobre.
+# Pred_aux = Pred_aux %>% mutate(Pobre_logit_enet = 
+#                                  ifelse(Pr_logit_enet>=Threshold_logit_enet[1,1], 
+#                                         1, 0)) %>%
+#   mutate(Pobre_logit_enet = factor(Pobre_logit_enet, levels = c(0,1), 
+#                                       labels = c("No_pobre", "Pobre")))
+# 
+# #La matriz de confusión para obtener el F1 score.
+# aux_logit_enet = confusionMatrix(data = Pred_aux$Pobre_logit_enet, 
+#                                     reference = Pred_aux$train_final.Pobre,
+#                                     positive = "Pobre")
+# 
 
 # Árboles -----------------------------------------------------------------
 #Le vamos a encimar CV para encontrar el mejor valor de la poda.
 ctrl = trainControl(method = "cv",
-                    number = 10,
+                    number = 5,
                     classProbs = T,
                     verbose=F,
                     savePredictions = T)
 
 tree_cp = train(model, data = train_final,
                 method = "rpart",
-                trControl = fitControl,
+                trControl = ctrl,
                 tuneGrid = expand.grid(cp = 
                                          seq(0.01, 0.9, length.out = 50)))
-
-#El mejor valor de poda.
-tree_cp$bestTune$cp
 
 #Nuevamente repetimos el proceso del treshold óptimo
 #La predicción de la probabilidad.
@@ -252,10 +247,10 @@ Pred_aux$Pr_Arbol_cp = predict(tree_cp, newdata = train_final,
 #Calculo de la curva roc
 Arbol_tree_roc = roc(Pred_aux$train_final.Pobre ~ Pred_aux$Pr_Arbol_cp, 
                         plot = T, auc = F)
-auc_tree_cp = auc(Arbol_tree_cp)
+auc_tree_cp = auc(Arbol_tree_roc)
 
 #El treshold óptimo.
-Threshold_tree_cp = coords(auc_tree_cp, "best", ret = "threshold", 
+Threshold_tree_cp = coords(Arbol_tree_roc, "best", ret = "threshold", 
                                  maximize = "s")
 #Las predicciones de pobre.
 Pred_aux = Pred_aux %>% mutate(Pobre_tree_cp = 
@@ -277,11 +272,11 @@ aux_tree_roc = confusionMatrix(data = Pred_aux$Pobre_tree_cp,
 RF = ranger(model,
             data = train_final,
             num.trees = 100,
-            mtry = sqrt(dim(train_final[,-(1:4)])[2]))
+            mtry = sqrt(dim(train_final[,-(1:4)])[2]), 
+            probability = T)
 
 #La predicción de la probabilidad.
-Pred_aux$Pr_RF = predict(tree_cp, newdata = train_final,
-                               type = "prob")[[2]]
+Pred_aux$Pr_RF = RF$predictions[,2]
 
 #Calculo de la curva roc
 RF_roc = roc(Pred_aux$train_final.Pobre ~ Pred_aux$Pr_RF, 
@@ -289,7 +284,7 @@ RF_roc = roc(Pred_aux$train_final.Pobre ~ Pred_aux$Pr_RF,
 auc_RF = auc(RF_roc)
 
 #El treshold óptimo.
-Threshold_RF = coords(auc_RF, "best", ret = "threshold", 
+Threshold_RF = coords(RF_roc, "best", ret = "threshold", 
                             maximize = "s")
 #Las predicciones de pobre.
 Pred_aux = Pred_aux %>% mutate(Pobre_RF = 
@@ -308,16 +303,15 @@ aux_RF = confusionMatrix(data = Pred_aux$Pobre_RF,
 
 #Carpintería
 ctrl = trainControl(method = "cv",
-                    number = 5,
+                    number = 2,
                     classProbs = T,
                     verbose=F,
                     savePredictions = T)
 
 Grilla = expand.grid(
-  mtry = c(1:6),
+  mtry = c(4),
   splitrule = "variance",
-  min.node.size = (seq(10,50,5)))
-
+  min.node.size = (seq(2000,2100,100)))
 
 RF_CV <- train(
   model,
@@ -410,9 +404,9 @@ saveRDS(F1_DB, paste0(path,"Stores/F1_clasificacion.rds"))
 # Hiperparámetros óptimos -------------------------------------------------
 
 Hiperparametros = data.frame("Modelo" = c("Enet","Árbol_CP", "RF_CV"),
-                             "Alpha" = c(Parametros[1,"alpha"], 
+                             "Alpha" = c(Best_tune[1,1], 
                                          tree_cp$bestTune$cp, NA),
-                             "Lambda" = c(Parametros[1,"lambda"], NA, NA),
+                             "Lambda" = c(Best_tune[1,2], NA, NA),
                              "mtry" = c(NA, NA, RF_CV$bestTune[1,"mtry"]),
                              "min.node.size" = c(NA, NA, RF_CV$bestTune[1,"min.node.size"])
 )
