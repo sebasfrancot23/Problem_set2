@@ -28,7 +28,8 @@
 # Preparación del ambiente ------------------------------------------------
 rm(list=setdiff(ls(), c("train_final", "test_final")))
 
-libraries = c("tidyverse", "stats", "stargazer", "caret", "glmnet", "xtable") 
+libraries = c("tidyverse", "stats", "stargazer", "caret", "glmnet", "xtable",
+              "rpart.plot", "ranger") 
 
 if(length(setdiff(libraries, rownames(installed.packages()))) > 0){
   install.packages(setdiff(libraries, rownames(installed.packages())))
@@ -131,14 +132,87 @@ Enet_matrix = filter(Enet_matrix, alpha == Parametros[1,1] &
                        lambda == Parametros[1,2])
 
 
+# Árboles -----------------------------------------------------------------
+#Le vamos a encimar CV para encontrar el mejor valor de la poda.
+ctrl = trainControl(method = "cv",
+                    number = 10)
+
+tree_cp = train(model, data = train_final,
+                 method = "rpart",
+                 trControl = fitControl,
+                 tuneGrid = expand.grid(cp = 
+                                          seq(0.01, 0.9, length.out = 50)))
+
+#El mejor valor de poda.
+tree_cp$bestTune$cp
+
+
+# Random forest -----------------------------------------------------------
+#Ya sabes que los árboles tienen una robustez mala, así que aplicamos bagging 
+#para disminuir esa varianza. De paso le metemos random forest para que no estén 
+#correlacionados. 
+
+#Primero usamos la regla sqrt(p) para el tamaño del subconjunto de variables 
+#para partir la muestra.
+RF = ranger(model,
+            data = train_final,
+            num.trees = 100,
+            mtry = sqrt(dim(train_final[,-(1:4)])[2]))
+
+
+#Ahora metamos CV para sacar el mejor valor posible de mtry
+#la profundidad del árbol (con el mínimo de observaciones)
+
+#Carpintería
+ctrl = trainControl(method = "cv",
+                    number = 5,
+)
+
+Grilla = expand.grid(
+  mtry = c(1:6),
+  splitrule = "variance",
+  min.node.size = (seq(500,2000,100)))
+
+
+RF_CV <- train(
+  model,
+  data=train_final,
+  method = "ranger",
+  trControl = ctrl,
+  tuneGrid=Grilla,
+  importance="impurity",
+  ntree = 100
+)
+
+RF_CV$bestTune$cp
+
+RF_CV$finalModel
+
+
+# Boosting ----------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Metricas modelos --------------------------------------------------------
-#Primero se guardan los RMSE del ingreso_disponible.
-RMSE = data.frame("Modelo" = c("Regresión", "Elastic Net"),
-                      "RMSE" = c(lm_normal_RMSE, Enet_matrix[1,"RMSE"]))
-
-xtable(RMSE)
-saveRDS(RMSE, paste0(path,"Stores/RMSE_ingreso.rds"))
-
 #Ahora se calculará el F1 Score dentro de muestra. Así que por cada modelo se 
 #calculará a pie esta métrica.
 
@@ -199,14 +273,43 @@ Pred_aux$Pobre_ENet = ifelse(Pred_aux$train_final.Lp*Pred_aux$train_final.Npersu
 #Se calcula el F1 Score
 F1_ENet = F1_function(Pred_aux, "train_final.Pobre", "Pobre_ENet")  
 
+#El árbol con poda.
+Pred_aux$Ingreso_pred_Arbol_cp = predict(tree_cp, newdata = train_final)
+Pred_aux$Pobre_arbol_cp = ifelse(Pred_aux$train_final.Lp*Pred_aux$train_final.Lp>
+                                   Pred_aux$Ingreso_pred_Arbol_cp, 1, 0)
+
+#El F1 score.
+F1_Arbol_cp = F1_function(Pred_aux, "train_final.Pobre", "Pobre_arbol_cp")
+
+#Ahora para el random forest.
+Pred_aux$Ingreso_pred_RF = RF$predictions
+Pred_aux$Pobre_RF = ifelse(Pred_aux$train_final.Lp*Pred_aux$train_final.Lp>
+                             Pred_aux$Ingreso_pred_RF, 1, 0)
+
+#El F1 score.
+F1_RF = F1_function(Pred_aux, "train_final.Pobre", "Pobre_RF")
+
 #En un data.frame
-F1_DB = data.frame("Modelo" = c("Regresión", "Elastic Net"),
-                  "F1" = c(F1_regresion, F1_ENet))
+F1_DB = data.frame("Modelo" = c("Regresión", "Elastic Net", "Árbol_cp"),
+                  "F1" = c(F1_regresion, F1_ENet, F1_Arbol_cp))
 xtable(F1_DB)
 saveRDS(F1_DB, paste0(path,"Stores/F1_ingreso.rds"))
 
 
 
+#Se guardan los RMSE del ingreso_disponible.
+#Para el RF toca a pie
+aux = (Pred_aux$train_final.Ingreso_disponible-Pred_aux$Ingreso_pred_RF)^2 |>
+  sum() |> sqrt()
+          
+RMSE = data.frame("Modelo" = c("Regresión", "Elastic Net", "Árbol_cp",
+                               "RF"),
+                  "RMSE" = c(lm_normal_RMSE, Enet_matrix[1,"RMSE"],
+                             tree_cp$results[which.min(tree_cp$results$RMSE),"RMSE"],
+                             aux))
+
+xtable(RMSE)
+saveRDS(RMSE, paste0(path,"Stores/RMSE_ingreso.rds"))
 
 
 
