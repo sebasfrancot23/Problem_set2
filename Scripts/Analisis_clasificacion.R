@@ -407,6 +407,18 @@ F1_DB = data.frame("Modelo" = c("Logit", "Probit", "Logit_tunning", "Logit_enet"
 xtable(F1_DB)
 saveRDS(F1_DB, paste0(path,"Stores/F1_clasificacion.rds"))
 
+# Hiperparámetros óptimos -------------------------------------------------
+
+Hiperparametros = data.frame("Modelo" = c("Enet","Árbol_CP", "RF_CV"),
+                             "Alpha" = c(Parametros[1,"alpha"], 
+                                         tree_cp$bestTune$cp, NA),
+                             "Lambda" = c(Parametros[1,"lambda"], NA, NA),
+                             "mtry" = c(NA, NA, RF_CV$bestTune[1,"mtry"]),
+                             "min.node.size" = c(NA, NA, RF_CV$bestTune[1,"min.node.size"])
+)
+
+xtable(Hiperparametros)
+saveRDS(RMSE, paste0(path,"Stores/Hiperparametros_clasificacion.rds"))
 
 
 

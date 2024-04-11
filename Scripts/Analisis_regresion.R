@@ -165,13 +165,13 @@ RF = ranger(model,
 
 #Carpintería
 ctrl = trainControl(method = "cv",
-                    number = 5,
+                    number = 2,
 )
 
 Grilla = expand.grid(
-  mtry = c(1:6),
+  mtry = c(4),
   splitrule = "variance",
-  min.node.size = (seq(500,2000,100)))
+  min.node.size = (seq(2000,2100,100)))
 
 
 RF_CV <- train(
@@ -183,11 +183,6 @@ RF_CV <- train(
   importance="impurity",
   ntree = 100
 )
-
-RF_CV$bestTune$cp
-
-RF_CV$finalModel
-
 
 # Boosting ----------------------------------------------------------------
 
@@ -286,12 +281,19 @@ Pred_aux$Ingreso_pred_RF = RF$predictions
 Pred_aux$Pobre_RF = ifelse(Pred_aux$train_final.Lp*Pred_aux$train_final.Lp>
                              Pred_aux$Ingreso_pred_RF, 1, 0)
 
+#El RF con CV
+Pred_aux$Ingreso_pred_RF_CV = predict(RF_CV, newdata = train_final)
+Pred_aux$Pobre_RF_CV = ifelse(Pred_aux$train_final.Lp*Pred_aux$train_final.Lp>
+                                   Pred_aux$Ingreso_pred_RF_CV, 1, 0)
+
 #El F1 score.
-F1_RF = F1_function(Pred_aux, "train_final.Pobre", "Pobre_RF")
+F1_RF_CV = F1_function(Pred_aux, "train_final.Pobre", "Pobre_RF_CV")
 
 #En un data.frame
-F1_DB = data.frame("Modelo" = c("Regresión", "Elastic Net", "Árbol_cp"),
-                  "F1" = c(F1_regresion, F1_ENet, F1_Arbol_cp))
+F1_DB = data.frame("Modelo" = c("Regresión", "Elastic Net", "Árbol_cp", 
+                                "RF", "RF_CV"),
+                  "F1" = c(F1_regresion, F1_ENet, F1_Arbol_cp, F1_RF,
+                           F1_RF_CV))
 xtable(F1_DB)
 saveRDS(F1_DB, paste0(path,"Stores/F1_ingreso.rds"))
 
@@ -303,18 +305,28 @@ aux = (Pred_aux$train_final.Ingreso_disponible-Pred_aux$Ingreso_pred_RF)^2 |>
   sum() |> sqrt()
           
 RMSE = data.frame("Modelo" = c("Regresión", "Elastic Net", "Árbol_cp",
-                               "RF"),
+                               "RF", "RF_CV"),
                   "RMSE" = c(lm_normal_RMSE, Enet_matrix[1,"RMSE"],
                              tree_cp$results[which.min(tree_cp$results$RMSE),"RMSE"],
-                             aux))
+                             aux, RF_CV$results[which.min(RF_CV$results$RMSE),"RMSE"]))
 
 xtable(RMSE)
 saveRDS(RMSE, paste0(path,"Stores/RMSE_ingreso.rds"))
 
 
 
+# Hiperparámetros óptimos -------------------------------------------------
 
+Hiperparametros = data.frame("Modelo" = c("Enet","Árbol_CP", "RF_CV"),
+                             "Alpha" = c(Parametros[1,"alpha"], 
+                                         tree_cp$bestTune$cp, NA),
+                             "Lambda" = c(Parametros[1,"lambda"], NA, NA),
+                             "mtry" = c(NA, NA, RF_CV$bestTune[1,"mtry"]),
+                             "min.node.size" = c(NA, NA, RF_CV$bestTune[1,"min.node.size"])
+                             )
 
+xtable(Hiperparametros)
+saveRDS(RMSE, paste0(path,"Stores/Hiperparametros_regresion.rds"))
 
 
 
