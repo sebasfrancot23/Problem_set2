@@ -99,7 +99,7 @@ rm(X)
 rm(Y)
 
 #Se definen los parámetros para realizar la búsqueda del parámetro óptimo.
-Grilla = expand.grid(alpha = seq(0,1,0.5),
+Grilla = expand.grid(alpha = seq(0,1,0.02),
                      lambda = aux_lambda_1$lambda)
 
 #Se definen los parámetros del CV
@@ -204,24 +204,6 @@ Arbol_boost = train(model,
                     trControl = fitControl,
                     tuneGrid = Grilla_boost,
                     verbose = F)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 # Metricas modelos --------------------------------------------------------

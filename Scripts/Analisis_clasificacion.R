@@ -304,15 +304,15 @@ aux_RF = confusionMatrix(data = Pred_aux$Pobre_RF,
 
 #Carpintería
 ctrl = trainControl(method = "cv",
-                    number = 2,
+                    number = 5,
                     classProbs = T,
                     verbose=F,
                     savePredictions = T)
 
 Grilla = expand.grid(
-  mtry = c(4),
+  mtry = c(3:7),
   splitrule = "variance",
-  min.node.size = (seq(2000,2100,100)))
+  min.node.size = (seq(2000,10000,1000)))
 
 RF_CV <- train(
   model,
