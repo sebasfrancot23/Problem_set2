@@ -27,7 +27,7 @@
 rm(list=setdiff(ls(), c("train_final", "test_final", "Grilla")))
 
 libraries = c("ggplot2", "tidyverse", "pROC", "caret", "stats", "xtable", 
-              "MLmetrics") 
+              "MLmetrics", "gbm") 
 
 if(length(setdiff(libraries, rownames(installed.packages()))) > 0){
   install.packages(setdiff(libraries, rownames(installed.packages())))
@@ -45,6 +45,7 @@ train_final = readRDS(paste0(path, "Stores/train_final.rds"))
 train_final = train_final %>% 
   mutate(Pobre = factor(Pobre,levels = c(0,1), labels = c("No_pobre", "Pobre")))
 train_final = train_final[complete.cases(train_final),]
+
 # Logit y probit ----------------------------------------------------------
 #Como el propósito ahora es es predecir pobre, se cambia la ecuación.
 model = Pobre ~ numero_cuartos + tipo_propiedad+Npersug+
@@ -355,6 +356,11 @@ aux_RF_CV = confusionMatrix(data = Pred_aux$Pobre_RF_CV,
 
 
 
+
+
+
+
+
 # Curvas ROC. -------------------------------------------------------------
 #Luego de haber estimado distintos modelos Logit Y Probit se gráfican sus curvas
 #roc para entender cuál está siendo el mejor predictor en términos del TPR. 
@@ -412,9 +418,11 @@ Hiperparametros = data.frame("Modelo" = c("Enet","Árbol_CP", "RF_CV"),
 )
 
 xtable(Hiperparametros)
-saveRDS(RMSE, paste0(path,"Stores/Hiperparametros_clasificacion.rds"))
+saveRDS(Hiperparametros, paste0(path,"Stores/Hiperparametros_clasificacion.rds"))
 
-
+#Por simplicidad para el latex mando los del boosting aparte.
+Boosting = data.frame(Arbol_boost$bestTune)
+saveRDS(Boosting, paste0(path,"Stores/Hiperparametros_boosting_clasificacion.rds"))
 
 
 

@@ -103,9 +103,9 @@ Grilla = expand.grid(alpha = seq(0,1,0.5),
                      lambda = aux_lambda_1$lambda)
 
 #Se definen los parámetros del CV
-fitControl <- trainControl(
+fitControl = trainControl(
   method = "cv", 
-  number = 10) 
+  number = 5) 
 
 #Ahora sí el CV para encontrar los parámetros de la red elástica que minimicen
 #el MSE.
@@ -185,8 +185,25 @@ RF_CV <- train(
 )
 
 # Boosting ----------------------------------------------------------------
+#Esto necesita una grilla especial de 4 hiperparámetros.
+#Lo que haremos es CV para probar qué combinación de esos hiperparámetros es la mejor.
 
+Grilla_boost = expand.grid(n.trees= c(200,100), #O el número de aprendizajes de 
+                           #boosting (cuántos árboles va a estimar)
+                           interaction.depth = c(5:7), #Qué tan profundo serán los
+                           #árboles que se estimarán en cada iteración. 
+                           shrinkage = 0.01, #Qué tanto vamos a relantizar el
+                           #aprendizaje.
+                           n.minobsinnode = c(10000) #Cuántas observaciones debe 
+                           #tener un nodo para volverse final.
+)
 
+Arbol_boost = train(model,
+                    data = train_final,
+                    method = "gbm",
+                    trControl = fitControl,
+                    tuneGrid = Grilla_boost,
+                    verbose = F)
 
 
 
@@ -285,18 +302,21 @@ Pred_aux$Pobre_RF = ifelse(Pred_aux$train_final.Lp*Pred_aux$train_final.Lp>
 Pred_aux$Ingreso_pred_RF_CV = predict(RF_CV, newdata = train_final)
 Pred_aux$Pobre_RF_CV = ifelse(Pred_aux$train_final.Lp*Pred_aux$train_final.Lp>
                                    Pred_aux$Ingreso_pred_RF_CV, 1, 0)
+#Boosting.
+Pred_aux$Ingreso_pred_boost = predict(Arbol_boost, newdata = train_final)
+Pred_aux$Pobre_boost = ifelse(Pred_aux$train_final.Lp*Pred_aux$train_final.Lp>
+                                Pred_aux$Ingreso_pred_boost, 1, 0)
 
 #El F1 score.
-F1_RF_CV = F1_function(Pred_aux, "train_final.Pobre", "Pobre_RF_CV")
+F1_boost = F1_function(Pred_aux, "train_final.Pobre", "Pobre_boost")
 
 #En un data.frame
 F1_DB = data.frame("Modelo" = c("Regresión", "Elastic Net", "Árbol_cp", 
-                                "RF", "RF_CV"),
+                                "RF", "RF_CV", "Boosting"),
                   "F1" = c(F1_regresion, F1_ENet, F1_Arbol_cp, F1_RF,
-                           F1_RF_CV))
+                           F1_RF_CV, F1_boost))
 xtable(F1_DB)
 saveRDS(F1_DB, paste0(path,"Stores/F1_ingreso.rds"))
-
 
 
 #Se guardan los RMSE del ingreso_disponible.
@@ -305,15 +325,18 @@ aux = (Pred_aux$train_final.Ingreso_disponible-Pred_aux$Ingreso_pred_RF)^2 |>
   sum() |> sqrt()
           
 RMSE = data.frame("Modelo" = c("Regresión", "Elastic Net", "Árbol_cp",
-                               "RF", "RF_CV"),
+                               "RF", "RF_CV", "Boosting"),
                   "RMSE" = c(lm_normal_RMSE, Enet_matrix[1,"RMSE"],
                              tree_cp$results[which.min(tree_cp$results$RMSE),"RMSE"],
-                             aux, RF_CV$results[which.min(RF_CV$results$RMSE),"RMSE"]))
+                             aux, RF_CV$results[which.min(RF_CV$results$RMSE),"RMSE"],
+                             Arbol_boost$results[which.min(Arbol_boost$results$RMSE),
+                                                 "RMSE"]))
 
 xtable(RMSE)
 saveRDS(RMSE, paste0(path,"Stores/RMSE_ingreso.rds"))
 
-
+#Y las predicciones de los modelos.
+saveRDS(Pred_aux, paste0(path,"Stores/Predicciones_regresiones.rds"))
 
 # Hiperparámetros óptimos -------------------------------------------------
 
@@ -326,8 +349,11 @@ Hiperparametros = data.frame("Modelo" = c("Enet","Árbol_CP", "RF_CV"),
                              )
 
 xtable(Hiperparametros)
-saveRDS(RMSE, paste0(path,"Stores/Hiperparametros_regresion.rds"))
+saveRDS(Hiperparametros, paste0(path,"Stores/Hiperparametros_regresion.rds"))
 
+#Por simplicidad para el latex mando los del boosting aparte.
+Boosting = data.frame(Arbol_boost$bestTune)
+saveRDS(Boosting, paste0(path,"Stores/Hiperparametros_boosting.rds"))
 
 
 
