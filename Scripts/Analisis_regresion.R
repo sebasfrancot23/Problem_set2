@@ -165,13 +165,13 @@ RF = ranger(model,
 
 #Carpintería
 ctrl = trainControl(method = "cv",
-                    number = 2,
+                    number = 5,
 )
 
 Grilla = expand.grid(
-  mtry = c(4),
+  mtry = c(3:6),
   splitrule = "variance",
-  min.node.size = (seq(2000,2100,100)))
+  min.node.size = (seq(2000,10000,1000)))
 
 
 RF_CV <- train(
@@ -188,9 +188,9 @@ RF_CV <- train(
 #Esto necesita una grilla especial de 4 hiperparámetros.
 #Lo que haremos es CV para probar qué combinación de esos hiperparámetros es la mejor.
 
-Grilla_boost = expand.grid(n.trees= c(200,100), #O el número de aprendizajes de 
+Grilla_boost = expand.grid(n.trees= c(200,300,400), #O el número de aprendizajes de 
                            #boosting (cuántos árboles va a estimar)
-                           interaction.depth = c(5:7), #Qué tan profundo serán los
+                           interaction.depth = c(7:10), #Qué tan profundo serán los
                            #árboles que se estimarán en cada iteración. 
                            shrinkage = 0.01, #Qué tanto vamos a relantizar el
                            #aprendizaje.
@@ -280,10 +280,17 @@ Pred_aux$Ingreso_pred_RF = RF$predictions
 Pred_aux$Pobre_RF = ifelse(Pred_aux$train_final.Lp*Pred_aux$train_final.Lp>
                              Pred_aux$Ingreso_pred_RF, 1, 0)
 
+#El F1 score.
+F1_RF = F1_function(Pred_aux, "train_final.Pobre", "Pobre_RF")
+
 #El RF con CV
 Pred_aux$Ingreso_pred_RF_CV = predict(RF_CV, newdata = train_final)
 Pred_aux$Pobre_RF_CV = ifelse(Pred_aux$train_final.Lp*Pred_aux$train_final.Lp>
                                    Pred_aux$Ingreso_pred_RF_CV, 1, 0)
+
+#El F1 score.
+F1_RF_CV = F1_function(Pred_aux, "train_final.Pobre", "Pobre_RF_CV")
+
 #Boosting.
 Pred_aux$Ingreso_pred_boost = predict(Arbol_boost, newdata = train_final)
 Pred_aux$Pobre_boost = ifelse(Pred_aux$train_final.Lp*Pred_aux$train_final.Lp>

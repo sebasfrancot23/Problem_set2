@@ -177,54 +177,54 @@ aux_logit_tunning = confusionMatrix(data = Pred_aux$Pobre_logit_tunning,
 #Al model tunning se le aplica ahora elastic net y el alternative cut off.
 #La grilla se definió en el código anterior.
 
-# #Se definen los parámetros del CV
-# ctrl_multiStats<- trainControl(method = "cv",
-#                                number = 5,
-#                                summaryFunction = f1,
-#                                classProbs = TRUE,
-#                                verboseIter = FALSE,
-#                                savePredictions = T)
-# 
-# Grilla = expand.grid(alpha = seq(0,1,0.2),
-#                      lambda = seq(0,10,10))
-# #El train para realizar la búsqueda de los hiperparámetros óptimos.
-# logit_tunning_enet = train(model, method = "glmnet", data = train_final,
-#                       family = "binomial", trControl = ctrl_multiStats,
-#                       preProcess = c("center", "scale"),
-#                       tuneGrid = Grilla,
-#                       metric = "F1",
-#                       maximize = T)
-# 
-# #Los mejores hiperparámetros son:
-# Best_tune = logit_tunning_enet$bestTune
-# 
-# #Nos quedamos con las predicciones en los mejores parámetros
-# aux = logit_tunning_enet$pred
-# aux = filter(aux, alpha == Best_tune[1,1] & lambda == Best_tune[1,2])
-# 
-# Pred_aux$Pr_logit_enet = aux[["Pobre"]]
-# rm(aux)
-# 
-# #Se calcula la curva roc para obtener el mejor punto de corte.
-# logit_enet_roc = roc(Pred_aux$train_final.Pobre ~ Pred_aux$Pr_logit_enet, 
-#                      plot = T, auc = F)
-# auc_logit_enet = auc(logit_enet_roc)
-# 
-# #Threshold óptimo
-# Threshold_logit_enet = coords(logit_enet_roc, "best", ret = "threshold", 
-#                                  maximize = "s")
-# #Las predicciones de pobre.
-# Pred_aux = Pred_aux %>% mutate(Pobre_logit_enet = 
-#                                  ifelse(Pr_logit_enet>=Threshold_logit_enet[1,1], 
-#                                         1, 0)) %>%
-#   mutate(Pobre_logit_enet = factor(Pobre_logit_enet, levels = c(0,1), 
-#                                       labels = c("No_pobre", "Pobre")))
-# 
-# #La matriz de confusión para obtener el F1 score.
-# aux_logit_enet = confusionMatrix(data = Pred_aux$Pobre_logit_enet, 
-#                                     reference = Pred_aux$train_final.Pobre,
-#                                     positive = "Pobre")
-# 
+#Se definen los parámetros del CV
+ctrl_multiStats<- trainControl(method = "cv",
+                               number = 5,
+                               summaryFunction = f1,
+                               classProbs = TRUE,
+                               verboseIter = FALSE,
+                               savePredictions = T)
+
+Grilla = expand.grid(alpha = seq(0,1,0.2),
+                     lambda = seq(0,10,10))
+#El train para realizar la búsqueda de los hiperparámetros óptimos.
+logit_tunning_enet = train(model, method = "glmnet", data = train_final,
+                      family = "binomial", trControl = ctrl_multiStats,
+                      preProcess = c("center", "scale"),
+                      tuneGrid = Grilla,
+                      metric = "F1",
+                      maximize = T)
+
+#Los mejores hiperparámetros son:
+Best_tune = logit_tunning_enet$bestTune
+
+#Nos quedamos con las predicciones en los mejores parámetros
+aux = logit_tunning_enet$pred
+aux = filter(aux, alpha == Best_tune[1,1] & lambda == Best_tune[1,2])
+
+Pred_aux$Pr_logit_enet = aux[["Pobre"]]
+rm(aux)
+
+#Se calcula la curva roc para obtener el mejor punto de corte.
+logit_enet_roc = roc(Pred_aux$train_final.Pobre ~ Pred_aux$Pr_logit_enet,
+                     plot = T, auc = F)
+auc_logit_enet = auc(logit_enet_roc)
+
+#Threshold óptimo
+Threshold_logit_enet = coords(logit_enet_roc, "best", ret = "threshold",
+                                 maximize = "s")
+#Las predicciones de pobre.
+Pred_aux = Pred_aux %>% mutate(Pobre_logit_enet =
+                                 ifelse(Pr_logit_enet>=Threshold_logit_enet[1,1],
+                                        1, 0)) %>%
+  mutate(Pobre_logit_enet = factor(Pobre_logit_enet, levels = c(0,1),
+                                      labels = c("No_pobre", "Pobre")))
+
+#La matriz de confusión para obtener el F1 score.
+aux_logit_enet = confusionMatrix(data = Pred_aux$Pobre_logit_enet,
+                                    reference = Pred_aux$train_final.Pobre,
+                                    positive = "Pobre")
+
 
 # Árboles -----------------------------------------------------------------
 #Le vamos a encimar CV para encontrar el mejor valor de la poda.
