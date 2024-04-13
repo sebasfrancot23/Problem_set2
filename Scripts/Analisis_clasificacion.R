@@ -344,7 +344,7 @@ RF_CV_roc = roc(Pred_aux$train_final.Pobre ~ Pred_aux$Pr_RF_CV,
 auc_RF_CV = auc(RF_CV_roc)
 
 #El treshold óptimo.
-Threshold_RF_CV = coords(auc_RF_CV, "best", ret = "threshold", 
+Threshold_RF_CV = coords(RF_CV_roc, "best", ret = "threshold", 
                       maximize = "s")
 #Las predicciones de pobre.
 Pred_aux = Pred_aux %>% mutate(Pobre_RF_CV = 
@@ -402,34 +402,31 @@ dev.off()
 
 # Métricas modelos --------------------------------------------------------
 #En un solo dataframe se condensan los F1 scores de los modelos.
-F1_DB = data.frame("Modelo" = c("Logit", "Probit", "Logit_tunning", "Logit_enet",
+F1_DB = data.frame("Modelo" = c("Logit", "Probit", "Logit_tunning",
                                 "Árbol_cp", "RF", "RF_CV"),
                    "F1" = c(aux_logit$byClass["F1"], aux_probit$byClass["F1"],
                             aux_logit_tunning$byClass["F1"],
-                            aux_logit_enet$byClass["F1"], 
                             aux_tree_roc$byClass["F1"],
                             aux_RF$byClass["F1"],
-                            aux_RC_CV$byClass["F1"]))
+                            aux_RF_CV$byClass["F1"]))
 
 xtable(F1_DB)
 saveRDS(F1_DB, paste0(path,"Stores/F1_clasificacion.rds"))
 
 # Hiperparámetros óptimos -------------------------------------------------
 
-Hiperparametros = data.frame("Modelo" = c("Enet","Árbol_CP", "RF_CV"),
-                             "Alpha" = c(Best_tune[1,1], 
-                                         tree_cp$bestTune$cp, NA),
-                             "Lambda" = c(Best_tune[1,2], NA, NA),
-                             "mtry" = c(NA, NA, RF_CV$bestTune[1,"mtry"]),
-                             "min.node.size" = c(NA, NA, RF_CV$bestTune[1,"min.node.size"])
+Hiperparametros = data.frame("Modelo" = c("Árbol_CP", "RF_CV"),
+                             "Alpha" = c(tree_cp$bestTune$cp, NA),
+                             "mtry" = c(NA, RF_CV$bestTune[1,"mtry"]),
+                             "min.node.size" = c(NA, RF_CV$bestTune[1,"min.node.size"])
 )
 
 xtable(Hiperparametros)
 saveRDS(Hiperparametros, paste0(path,"Stores/Hiperparametros_clasificacion.rds"))
 
 #Por simplicidad para el latex mando los del boosting aparte.
-Boosting = data.frame(Arbol_boost$bestTune)
-saveRDS(Boosting, paste0(path,"Stores/Hiperparametros_boosting_clasificacion.rds"))
+# Boosting = data.frame(Arbol_boost$bestTune)
+# saveRDS(Boosting, paste0(path,"Stores/Hiperparametros_boosting_clasificacion.rds"))
 
 
 
