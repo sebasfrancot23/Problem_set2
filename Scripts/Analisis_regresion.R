@@ -326,7 +326,7 @@ xtable(RMSE)
 saveRDS(RMSE, paste0(path,"Stores/RMSE_ingreso.rds"))
 
 #Y las predicciones de los modelos.
-saveRDS(Pred_aux, paste0(path,"Stores/Predicciones/Predicciones_regresiones.rds"))
+#saveRDS(Pred_aux, paste0(path,"Stores/Predicciones/Predicciones_regresiones.rds"))
 
 # Hiperparámetros óptimos -------------------------------------------------
 

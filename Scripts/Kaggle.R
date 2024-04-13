@@ -8,45 +8,73 @@
 
 # Preparación del ambiente ------------------------------------------------
 
-rm(list=ls())
+
 
 #Directorio de trabajo
 path = gsub("(.+)Scripts.+","\\1",rstudioapi::getActiveDocumentContext()$path)
 
+#Se importa la base de testeo.
+test_final = readRDS(paste0(path,"Stores/test_final.rds"))
+
 # Modelos de regresión ----------------------------------------------------
-#Se importan las predicciones de los modelos de regresión.
 
-Pred_regresiones = readRDS(paste0(path,"Stores/Predicciones/Predicciones_regresiones.rds"))
+aux = readRDS(paste0(path, "Stores/Procesadas/test_hogares.rds"))
 
-#Pred_regresiones = cbind(train_final$id, Pred_regresiones)
 
-#Conservo las variables de interés (o sea el id y las predicciones).
-aux = c("train_final$id", grep("^Pobre", colnames(Pred_regresiones), 
-                               value = TRUE))
 
-Pred_regresiones = Pred_regresiones[, colnames(Pred_regresiones) %in% aux]
+#Para el modelo de regresión.
+Pred_aux = data.frame("id" = test_final$id,
+                      "Ingreso" = predict(lm_normal, 
+                                            newdata = test_final))
+#Se crea la variable que indica si es pobre o no.
+Pred_aux = mutate(Pred_aux, pobre = ifelse(test_final$Lp*test_final$Npersug>
+                                             Ingreso,1,0))
 
-#Se define una función auxiliar para obtener las predicciones en el formato
-#adecuado para la subida.
+Pred_aux = Pred_aux[complete.cases(Pred_aux),]
+#Conservo las variables de interés.
+Pred_aux = Pred_aux[,c(1,3)]
 
-Formato = function(DB, nombre_columna, nombre_archivo){
-  aux = DB[,c("train_final$id", nombre_columna)]
-  #Se cambian los nombres a los adecuados.
-  colnames(aux) = c("id", "pobre")
-  
-  #Se exporta en formato csv.
-  write.csv(aux, paste0(path, "Stores/Predicciones/",
-                        nombre_archivo,".csv"),
-                        row.names = F)
-}
+#Carpintería chimba.
+id = c(
+  "2a7ddc2779480d7f19834953",
+  "a0c2e751e582fd49d564f308",
+  "57273d19e8464a5ff66a582b",
+  "418d052ff7878940ab938601",
+  "212a37fc17016a3c78f76852",
+  "7b0b8c4814944383d6c8cef1"
+)
 
-#Se corre la función para cada uno de los modelos.
-Formato(Pred_regresiones, "Pobre_regresion", "regression_linearmodel")
-Formato(Pred_regresiones, "Pobre_ENet", "regression_elasticnet")
-Formato(Pred_regresiones, "Pobre_arbol_cp", "regression_CART")
-Formato(Pred_regresiones, "Pobre_RF", "regression_Random_forest")
-Formato(Pred_regresiones, "Pobre_RF_CV", "regression_Random_forest_CV")
-Formato(Pred_regresiones, "Pobre_boost", "regression_boosting")
+
+aux = matrix(0, nrow = 4, ncol = 2)
+aux[,1] = 1:4
+colnames(aux) = colnames(Pred_aux)
+Pred_aux = rbind(Pred_aux, aux)
+                                    
+#Se exporta
+write.csv(Pred_aux, paste0(path, 
+                           "Stores/Predicciones/regression_lm.csv"),
+          row.names = F)
+
+
+
+
+Formato(test_final, ENet, "regression_elasticnet")
+Formato(test_final, tree_cp, "regression_CART")
+Formato(test_final, tree_cp, "regression_CART")
+Formato(test_final, RF_CV, "regression_Random_forest_CV", skip = T)
+Formato(test_final, Arbol_boost, "regression_boosting", skip = T)
+
+#Random forest es un poquito diferente porque es ranger
+Pred_aux = data.frame("id" = test_final$id,
+                      "Ingreso" = predict(RF, data = test_final))
+
+
+
+Formato(test_final, RF, "regression_Random_forest", skip = T)
+
+
+
+
 
 
 

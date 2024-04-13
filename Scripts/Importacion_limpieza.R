@@ -52,7 +52,7 @@ test_hogares = read.csv(paste0(path, "Stores/Pre_procesadas/test_hogares.csv"))
 
 #Variables que nos importan
 test_hogares = test_hogares %>% 
-  select(id, Clase, Dominio, P5000, P5090, P5130, P5140, Nper, Lp, Depto) %>%
+  select(id, Clase, Dominio, P5000, P5090, P5130, P5140, Npersug, Lp, Depto) %>%
   rename(numero_cuartos = P5000, tipo_propiedad = P5090) %>% 
   mutate(valor_arriendo = ifelse(is.na(P5140), P5130,
                                  P5140)) %>% #Creamos una variable que contenga 
@@ -258,8 +258,15 @@ test_personas = readRDS(paste0(path, "Stores/Procesadas/test_personas.rds"))
 
 #Se juntan.
 test_final = merge(test_hogares, test_personas, by = "id", all = T)
+#Solo hay un hogar con nivel de educación 9. Más adelante va a ser problemático
+#en la clasificación, así que se elimina.
+test_final = test_final %>%
+  filter(maxEduc_hogar!=9)
+
 #La función.
 test_final = factores(test_final)
+
+
 
 #Se exporta.
 saveRDS(test_final, paste0(path, "Stores/test_final.rds"))
