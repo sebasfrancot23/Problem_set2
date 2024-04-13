@@ -5,24 +5,6 @@
 #
 ###
 
-# Plan de acción: 
-# Acá el objetivo es directamente usar modelos para clasificar un hogar como pobre o 
-# no pobre. Es decir que chao la regresión lineal. Apoyáte en los mismos conjuntos 
-# de covariables que definitiste para predecir el ingreso. Combina cada uno de esos
-# conjuntos con las siguientes formas funcionales:
-#   Logit y Probit
-#   Logit y Probit enfocados en F1 score
-#   Logit y Probit enfocados en F1 score con regularización
-#   Random Forest o CART.
-
-# Al final quédate con los modelos que mejor predigan de acá para hacerles el análisis
-# detallado en el documento.
-
- 
-# Al final quédate con los modelos que mejor predigan de acá para hacerles el análisis
-# detallado en el documento.
-
-
 # Preparación del ambiente ------------------------------------------------
 rm(list=setdiff(ls(), c("train_final", "test_final", "Grilla")))
 
@@ -361,10 +343,47 @@ aux_RF_CV = confusionMatrix(data = Pred_aux$Pobre_RF_CV,
 
 # Boosting ----------------------------------------------------------------
 
+Grilla_boost = expand.grid(n.trees= c(200,300,400), #O el número de aprendizajes de 
+                           #boosting (cuántos árboles va a estimar)
+                           interaction.depth = c(7:10), #Qué tan profundo serán los
+                           #árboles que se estimarán en cada iteración. 
+                           shrinkage = 0.01, #Qué tanto vamos a relantizar el
+                           #aprendizaje.
+                           n.minobsinnode = c(10000) #Cuántas observaciones debe 
+                           #tener un nodo para volverse final.
+)
+
+Arbol_boost = train(model,
+                    data = train_final,
+                    method = "gbm",
+                    trControl = ctrl,
+                    tuneGrid = Grilla_boost,
+                    verbose = F)
 
 
+#La predicción de la probabilidad.
+Pred_aux$Pr_boosting = predict(Arbol_boost, newdata = train_final,
+                            type = "prob")[[2]]
 
+#Calculo de la curva roc
+Boost_roc = roc(Pred_aux$train_final.Pobre ~ Pred_aux$Pr_boosting, 
+                plot = T, auc = F)
+auc_Boost = auc(Boost_roc)
 
+#El treshold óptimo.
+Threshold_boost = coords(Boost_roc, "best", ret = "threshold", 
+                         maximize = "s")
+#Las predicciones de pobre.
+Pred_aux = Pred_aux %>% mutate(Pobre_Boost = 
+                                 ifelse(Pr_boosting>=Threshold_boost[1,1], 
+                                        1, 0)) %>%
+  mutate(Pobre_boosting = factor(Pobre_boosting, levels = c(0,1), 
+                              labels = c("No_pobre", "Pobre")))
+
+#La matriz de confusión para obtener el F1 score.
+aux_Boost = confusionMatrix(data = Pred_aux$Pobre_boosting, 
+                            reference = Pred_aux$train_final.Pobre,
+                            positive = "Pobre")
 
 
 
@@ -377,38 +396,38 @@ png(filename = paste0(path, "Views/Curvas_roc_logit.png"),
 plot(roc_logit, col = "blue", main = "Curvas ROC de Logit y Probit", print.auc = F)
 plot(roc_probit, col = "red", add = TRUE, lty = 2, print.auc = F)
 plot(logit_tunning_roc, col = "green", add = TRUE, lty = 2, print.auc = F)
-plot(logit_enet_roc, col = "orange", add = TRUE, lty = 2, print.auc = F)
-legend("bottomright", legend = c(paste("Logit (AUC =", round(auc_logit, 3), ")"),
-                                 paste("Probit (AUC =", round(auc_probit, 3), ")"),
+legend("bottomright", legend = c(paste("Logit (AUC =", round(auc_logit, 4), ")"),
+                                 paste("Probit (AUC =", round(auc_probit, 4), ")"),
                                  paste("Model tunning (AUC =", 
-                                       round(auc_logit_tunning,3), ")"),
-                                 paste("Red Elástica (AUC =", 
-                                       round(auc_logit_enet, 3), ")")),
-       col = c("blue", "red", "green", "orange"), lty = 1:2)
-dev.off
+                                       round(auc_logit_tunning,4), ")")),
+       col = c("blue", "red", "green"), lty = 1:2)
+dev.off()
 
 
 png(filename = paste0(path, "Views/Curvas_roc_arboles.png"),
     width = 1464, height = 750)
-plot(roc_tree, col = "blue", main = "Curvas ROC de árboles", print.auc = F)
+plot(Arbol_tree_roc, col = "blue", main = "Curvas ROC de árboles", print.auc = F)
 plot(RF_roc, col = "red", add = TRUE, lty = 2, print.auc = F)
 plot(RF_CV_roc, col = "green", add = TRUE, lty = 2, print.auc = F)
-legend("bottomright", legend = c(paste("Árboles (AUC =", round(auc_tree_cp, 3), ")"),
-                                 paste("Random forest (AUC =", round(auc_RF, 3), ")"),
+plot(Boost_roc, col = "orange", add = TRUE, lty = 2, print.auc = F)
+legend("bottomright", legend = c(paste("Árboles (AUC =", round(auc_tree_cp, 4), ")"),
+                                 paste("Random forest (AUC =", round(auc_RF, 4), ")"),
                                  paste("Random forest CV (AUC =", 
-                                       round(auc_RF_CV ,3), ")")),
-       col = c("blue", "red", "green"), lty = 1:2)
+                                       round(auc_RF_CV ,4), ")"),
+                                 paste("Boosting (AUC =", round(auc_Boost,4),")")),
+       col = c("blue", "red", "green", "orange"), lty = 1:2)
 dev.off()
 
 # Métricas modelos --------------------------------------------------------
 #En un solo dataframe se condensan los F1 scores de los modelos.
 F1_DB = data.frame("Modelo" = c("Logit", "Probit", "Logit_tunning",
-                                "Árbol_cp", "RF", "RF_CV"),
+                                "Árbol_cp", "RF", "RF_CV", "Boost"),
                    "F1" = c(aux_logit$byClass["F1"], aux_probit$byClass["F1"],
                             aux_logit_tunning$byClass["F1"],
                             aux_tree_roc$byClass["F1"],
                             aux_RF$byClass["F1"],
-                            aux_RF_CV$byClass["F1"]))
+                            aux_RF_CV$byClass["F1"],
+                            aux_Boost$byClass["F1"]))
 
 xtable(F1_DB)
 saveRDS(F1_DB, paste0(path,"Stores/F1_clasificacion.rds"))
@@ -425,8 +444,8 @@ xtable(Hiperparametros)
 saveRDS(Hiperparametros, paste0(path,"Stores/Hiperparametros_clasificacion.rds"))
 
 #Por simplicidad para el latex mando los del boosting aparte.
-# Boosting = data.frame(Arbol_boost$bestTune)
-# saveRDS(Boosting, paste0(path,"Stores/Hiperparametros_boosting_clasificacion.rds"))
+Boosting = data.frame(Arbol_boost$bestTune)
+saveRDS(Boosting, paste0(path,"Stores/Hiperparametros_boosting_clasificacion.rds"))
 
 
 
