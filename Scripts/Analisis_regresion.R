@@ -242,7 +242,8 @@ F1_function = function(DB, i, j){
 }
 
 #Primero para el modelo de regresión.
-Pred_aux = data.frame(train_final$Ingreso_disponible, 
+Pred_aux = data.frame(train_final$id,
+                      train_final$Ingreso_disponible, 
                       train_final$Lp, train_final$Npersug, 
                       train_final$Pobre, 
                       "Ingreso_pred_reg" = lm_normal_pred)
@@ -325,7 +326,7 @@ xtable(RMSE)
 saveRDS(RMSE, paste0(path,"Stores/RMSE_ingreso.rds"))
 
 #Y las predicciones de los modelos.
-saveRDS(Pred_aux, paste0(path,"Stores/Predicciones_regresiones.rds"))
+saveRDS(Pred_aux, paste0(path,"Stores/Predicciones/Predicciones_regresiones.rds"))
 
 # Hiperparámetros óptimos -------------------------------------------------
 

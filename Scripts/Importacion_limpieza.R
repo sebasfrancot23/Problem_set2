@@ -227,6 +227,11 @@ train_personas = readRDS(paste0(path, "Stores/Procesadas/train_personas.rds"))
 #Se juntan.
 train_final = merge(train_hogares, train_personas, by = "id", all = T)
 
+#Solo hay un hogar con nivel de educación 9. Más adelante va a ser problemático
+#en la clasificación, así que se elimina.
+train_final = train_final %>%
+  filter(maxEduc_hogar!=9)
+
 #Algunas variable son cualitativas, se vuelven factores.
 factores = function(DB){
   DB = DB %>% 
