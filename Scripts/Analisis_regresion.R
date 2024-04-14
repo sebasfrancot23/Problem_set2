@@ -42,11 +42,7 @@ path = gsub("(.+)Scripts.+","\\1",rstudioapi::getActiveDocumentContext()$path)
 
 #Se establece una semilla
 set.seed(8475987)
-
-#Se importa la base de datos train.
-train_final = readRDS(paste0(path, "Stores/train_final.rds"))
-
-
+train_final = readRDS(paste0(path,"Stores/train_final.rds"))
 # Modelo de regresión. ---------------------------------------------------
 
 #Por simplicidad se define la ecuación en una variable.
@@ -154,11 +150,26 @@ tree_cp$bestTune$cp
 
 #Primero usamos la regla sqrt(p) para el tamaño del subconjunto de variables 
 #para partir la muestra.
-RF = ranger(model,
-            data = train_final,
-            num.trees = 100,
-            mtry = sqrt(dim(train_final[,-(1:4)])[2]))
 
+ctrl = trainControl(method = "none",
+                    number = 0,
+)
+
+Grilla = expand.grid(
+  mtry = c(4),
+  splitrule = "variance",
+  min.node.size = 2000)
+
+
+RF <- train(
+  model,
+  data=train_final,
+  method = "ranger",
+  trControl = ctrl,
+  tuneGrid=Grilla,
+  importance="impurity",
+  ntree = 100
+)
 
 #Ahora metamos CV para sacar el mejor valor posible de mtry
 #la profundidad del árbol (con el mínimo de observaciones)
@@ -270,15 +281,15 @@ F1_ENet = F1_function(Pred_aux, "train_final.Pobre", "Pobre_ENet")
 
 #El árbol con poda.
 Pred_aux$Ingreso_pred_Arbol_cp = predict(tree_cp, newdata = train_final)
-Pred_aux$Pobre_arbol_cp = ifelse(Pred_aux$train_final.Lp*Pred_aux$train_final.Lp>
+Pred_aux$Pobre_arbol_cp = ifelse(Pred_aux$train_final.Lp*Pred_aux$train_final.Npersug>
                                    Pred_aux$Ingreso_pred_Arbol_cp, 1, 0)
 
 #El F1 score.
 F1_Arbol_cp = F1_function(Pred_aux, "train_final.Pobre", "Pobre_arbol_cp")
 
 #Ahora para el random forest.
-Pred_aux$Ingreso_pred_RF = RF$predictions
-Pred_aux$Pobre_RF = ifelse(Pred_aux$train_final.Lp*Pred_aux$train_final.Lp>
+Pred_aux$Ingreso_pred_RF = predict(RF, newdata = train_final)
+Pred_aux$Pobre_RF = ifelse(Pred_aux$train_final.Lp*Pred_aux$train_final.Npersug>
                              Pred_aux$Ingreso_pred_RF, 1, 0)
 
 #El F1 score.
@@ -286,7 +297,7 @@ F1_RF = F1_function(Pred_aux, "train_final.Pobre", "Pobre_RF")
 
 #El RF con CV
 Pred_aux$Ingreso_pred_RF_CV = predict(RF_CV, newdata = train_final)
-Pred_aux$Pobre_RF_CV = ifelse(Pred_aux$train_final.Lp*Pred_aux$train_final.Lp>
+Pred_aux$Pobre_RF_CV = ifelse(Pred_aux$train_final.Lp*Pred_aux$train_final.Npersug>
                                    Pred_aux$Ingreso_pred_RF_CV, 1, 0)
 
 #El F1 score.
@@ -294,7 +305,7 @@ F1_RF_CV = F1_function(Pred_aux, "train_final.Pobre", "Pobre_RF_CV")
 
 #Boosting.
 Pred_aux$Ingreso_pred_boost = predict(Arbol_boost, newdata = train_final)
-Pred_aux$Pobre_boost = ifelse(Pred_aux$train_final.Lp*Pred_aux$train_final.Lp>
+Pred_aux$Pobre_boost = ifelse(Pred_aux$train_final.Lp*Pred_aux$train_final.Npersug>
                                 Pred_aux$Ingreso_pred_boost, 1, 0)
 
 #El F1 score.
@@ -312,7 +323,7 @@ saveRDS(F1_DB, paste0(path,"Stores/F1_ingreso.rds"))
 #Se guardan los RMSE del ingreso_disponible.
 #Para el RF toca a pie
 aux = (Pred_aux$train_final.Ingreso_disponible-Pred_aux$Ingreso_pred_RF)^2 |>
-  sum() |> sqrt()
+  mean() |> sqrt()
           
 RMSE = data.frame("Modelo" = c("Regresión", "Elastic Net", "Árbol_cp",
                                "RF", "RF_CV", "Boosting"),

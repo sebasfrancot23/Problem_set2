@@ -377,11 +377,11 @@ Threshold_boost = coords(Boost_roc, "best", ret = "threshold",
 Pred_aux = Pred_aux %>% mutate(Pobre_Boost = 
                                  ifelse(Pr_boosting>=Threshold_boost[1,1], 
                                         1, 0)) %>%
-  mutate(Pobre_boosting = factor(Pobre_boosting, levels = c(0,1), 
+  mutate(Pobre_Boost = factor(Pobre_Boost, levels = c(0,1), 
                               labels = c("No_pobre", "Pobre")))
 
 #La matriz de confusión para obtener el F1 score.
-aux_Boost = confusionMatrix(data = Pred_aux$Pobre_boosting, 
+aux_Boost = confusionMatrix(data = Pred_aux$Pobre_Boost, 
                             reference = Pred_aux$train_final.Pobre,
                             positive = "Pobre")
 
