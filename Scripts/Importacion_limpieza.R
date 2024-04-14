@@ -250,6 +250,7 @@ factores = function(DB){
 train_final = factores(train_final)
 
 #Se exporta.
+train_final = train_final[complete.cases(train_final),]
 saveRDS(train_final, paste0(path, "Stores/train_final.rds"))
 
 #Ahora el test.
@@ -265,8 +266,6 @@ test_final = test_final %>%
 
 #La función.
 test_final = factores(test_final)
-
-
 
 #Se exporta.
 saveRDS(test_final, paste0(path, "Stores/test_final.rds"))
