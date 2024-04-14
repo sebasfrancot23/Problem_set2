@@ -281,7 +281,7 @@ F1_ENet = F1_function(Pred_aux, "train_final.Pobre", "Pobre_ENet")
 
 #El árbol con poda.
 Pred_aux$Ingreso_pred_Arbol_cp = predict(tree_cp, newdata = train_final)
-Pred_aux$Pobre_arbol_cp = ifelse(red_aux$train_final.Lp*Pred_aux$train_final.Npersug>
+Pred_aux$Pobre_arbol_cp = ifelse(Pred_aux$train_final.Lp*Pred_aux$train_final.Npersug>
                                    Pred_aux$Ingreso_pred_Arbol_cp, 1, 0)
 
 #El F1 score.
@@ -289,7 +289,7 @@ F1_Arbol_cp = F1_function(Pred_aux, "train_final.Pobre", "Pobre_arbol_cp")
 
 #Ahora para el random forest.
 Pred_aux$Ingreso_pred_RF = predict(RF, newdata = train_final)
-Pred_aux$Pobre_RF = ifelse(red_aux$train_final.Lp*Pred_aux$train_final.Npersug>
+Pred_aux$Pobre_RF = ifelse(Pred_aux$train_final.Lp*Pred_aux$train_final.Npersug>
                              Pred_aux$Ingreso_pred_RF, 1, 0)
 
 #El F1 score.
@@ -297,7 +297,7 @@ F1_RF = F1_function(Pred_aux, "train_final.Pobre", "Pobre_RF")
 
 #El RF con CV
 Pred_aux$Ingreso_pred_RF_CV = predict(RF_CV, newdata = train_final)
-Pred_aux$Pobre_RF_CV = ifelse(red_aux$train_final.Lp*Pred_aux$train_final.Npersug>
+Pred_aux$Pobre_RF_CV = ifelse(Pred_aux$train_final.Lp*Pred_aux$train_final.Npersug>
                                    Pred_aux$Ingreso_pred_RF_CV, 1, 0)
 
 #El F1 score.
@@ -305,7 +305,7 @@ F1_RF_CV = F1_function(Pred_aux, "train_final.Pobre", "Pobre_RF_CV")
 
 #Boosting.
 Pred_aux$Ingreso_pred_boost = predict(Arbol_boost, newdata = train_final)
-Pred_aux$Pobre_boost = ifelse(red_aux$train_final.Lp*Pred_aux$train_final.Npersug>
+Pred_aux$Pobre_boost = ifelse(Pred_aux$train_final.Lp*Pred_aux$train_final.Npersug>
                                 Pred_aux$Ingreso_pred_boost, 1, 0)
 
 #El F1 score.
