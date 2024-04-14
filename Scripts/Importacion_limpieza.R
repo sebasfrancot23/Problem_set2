@@ -30,12 +30,15 @@ train_hogares = read.csv(paste0(path, "Stores/Pre_procesadas/train_hogares.csv")
 
 #Variables que nos importan
 train_hogares = train_hogares %>% 
-  select(id, Clase, Dominio, P5000, P5090, P5130, P5140, Nper, Ingtotugarr, 
-         Lp, Pobre, Depto) %>%
+  select(id, Clase, Dominio, P5000, P5090, P5130, P5140, Ingtotugarr, 
+         Lp, Depto, Npersug) %>%
   rename(numero_cuartos = P5000, tipo_propiedad = P5090, Ingreso_disponible = Ingtotugarr) %>% 
   mutate(valor_arriendo = ifelse(is.na(P5140), P5130,
                                  P5140)) %>% #Creamos una variable que contenga el valor del 
   #arriendo del hogar.
+  #Con base en el comentario de Ignacio, creamos una nueva variable indicadora de 
+  #pobreza.
+  mutate(Pobre = ifelse(Ingreso_disponible<Lp*Npersug, 1, 0)) %>%
   select(-P5130, -P5140)
 
 #Se exporta la base procesada.
@@ -49,7 +52,7 @@ test_hogares = read.csv(paste0(path, "Stores/Pre_procesadas/test_hogares.csv"))
 
 #Variables que nos importan
 test_hogares = test_hogares %>% 
-  select(id, Clase, Dominio, P5000, P5090, P5130, P5140, Nper, Lp, Depto) %>%
+  select(id, Clase, Dominio, P5000, P5090, P5130, P5140, Npersug, Lp, Depto) %>%
   rename(numero_cuartos = P5000, tipo_propiedad = P5090) %>% 
   mutate(valor_arriendo = ifelse(is.na(P5140), P5130,
                                  P5140)) %>% #Creamos una variable que contenga 
@@ -224,6 +227,11 @@ train_personas = readRDS(paste0(path, "Stores/Procesadas/train_personas.rds"))
 #Se juntan.
 train_final = merge(train_hogares, train_personas, by = "id", all = T)
 
+#Solo hay un hogar con nivel de educación 9. Más adelante va a ser problemático
+#en la clasificación, así que se elimina.
+train_final = train_final %>%
+  filter(maxEduc_hogar!=9)
+
 #Algunas variable son cualitativas, se vuelven factores.
 factores = function(DB){
   DB = DB %>% 
@@ -250,8 +258,15 @@ test_personas = readRDS(paste0(path, "Stores/Procesadas/test_personas.rds"))
 
 #Se juntan.
 test_final = merge(test_hogares, test_personas, by = "id", all = T)
+#Solo hay un hogar con nivel de educación 9. Más adelante va a ser problemático
+#en la clasificación, así que se elimina.
+test_final = test_final %>%
+  filter(maxEduc_hogar!=9)
+
 #La función.
 test_final = factores(test_final)
+
+
 
 #Se exporta.
 saveRDS(test_final, paste0(path, "Stores/test_final.rds"))

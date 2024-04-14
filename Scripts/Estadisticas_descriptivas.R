@@ -152,6 +152,9 @@ for (i in colnames(DB_discretas)){
 }
 
 
+# Análisis Ingreso/Pobre --------------------------------------------------
+
+
 
 
 
